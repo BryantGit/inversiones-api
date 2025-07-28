@@ -51,20 +51,19 @@ app.post('/api/inversiones', async (req, res) => {
 // Obtener inversión por ID
 app.get('/api/inversiones/:id', async (req, res) => {
   const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ message: 'ID inválido' });
 
   try {
     const { rows } = await pool.query('SELECT * FROM Inversiones WHERE Id = $1', [id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Inversión no encontrada' });
-    }
+    if (rows.length === 0) return res.status(404).json({ message: 'Inversión no encontrada' });
 
     res.json(rows[0]);
   } catch (error) {
-    console.error('Error al obtener la inversión:', error);
+    console.error(error);
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
+
 
 
 app.listen(port, () => {
