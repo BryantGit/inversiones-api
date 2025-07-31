@@ -34,20 +34,46 @@ app.get('/api/inversiones', async (req, res) => {
   }
 });
 
-// Insertar nueva inversión
 app.post('/api/inversiones', async (req, res) => {
   const { MontoInicial, TasaInteresAnual, FechaInicio, PlazoMeses } = req.body;
+
   try {
+    // Cálculos
+    const tasaMensual = TasaInteresAnual / 12 / 100;
+    const capitalFinal = MontoInicial * Math.pow(1 + tasaMensual, PlazoMeses);
+    const interesTotal = capitalFinal - MontoInicial;
+    const rendimientoMensual = interesTotal / PlazoMeses;
+
+    const fechaInicioObj = new Date(FechaInicio);
+    const fechaFinObj = new Date(fechaInicioObj);
+    fechaFinObj.setMonth(fechaFinObj.getMonth() + PlazoMeses);
+
+    // Insertar con cálculos
     const result = await pool.query(
-      'INSERT INTO Inversiones (MontoInicial, TasaInteresAnual, FechaInicio, PlazoMeses) VALUES ($1, $2, $3, $4) RETURNING *',
-      [MontoInicial, TasaInteresAnual, FechaInicio, PlazoMeses]
+      `INSERT INTO Inversiones 
+      (montoinicial, tasainteresanual, fechainicio, plazomeses, interestotal, capitalfinal, rendimientomensual, fechafin)
+
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        MontoInicial,
+        TasaInteresAnual,
+        FechaInicio,
+        PlazoMeses,
+        interesTotal,
+        capitalFinal,
+        rendimientoMensual,
+        fechaFinObj
+      ]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error(error);
+    console.error('Error al insertar inversión:', error);
     res.status(500).json({ error: 'Error al insertar inversión' });
   }
 });
+
+
 // Obtener inversión por ID
 app.get('/api/inversiones/:id', async (req, res) => {
   const id = parseInt(req.params.id);
